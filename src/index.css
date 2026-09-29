@@ -1,0 +1,22 @@
+:root {
+  font-family: 'Aptos', 'Segoe UI', sans-serif;
+  color: #203328;
+  background: #f7f8f5;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+  font-weight: 400;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button, input { font: inherit; }
+button:focus-visible, a:focus-visible { outline: 2px solid #b25e46; outline-offset: 3px; }
