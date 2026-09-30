@@ -706,7 +706,12 @@ begin
         'reference_code', request.reference_code,
         'requestor_name', request.requestor_name,
         'department', request.department,
+        'remarks', request.remarks,
         'created_at', request.created_at,
+        'reviewed_at', request.reviewed_at,
+        'approver_name', (select profile.full_name from public.profiles as profile where profile.id = request.reviewed_by),
+        'received_at', request.received_at,
+        'receiver_name', (select profile.full_name from public.profiles as profile where profile.id = request.received_by),
         'status', request.status,
         'items', coalesce((
           select jsonb_agg(jsonb_build_object(

@@ -5,6 +5,7 @@ function formatDate(value) {
   return new Intl.DateTimeFormat('en-PH', {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone: 'Asia/Manila',
   }).format(new Date(value))
 }
 
@@ -14,16 +15,20 @@ function ReceiverDashboard({ supabase, email, onSignOut, signingOut }) {
   const [busyRequestId, setBusyRequestId] = useState(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [receiptRequestId, setReceiptRequestId] = useState(null)
 
   async function loadDashboard() {
     setLoading(true)
     const { data, error } = await supabase.rpc('get_receiver_dashboard')
-    if (error) setErrorMessage(error.message || 'Could not load approved requests.')
-    else {
-      setDashboard(data ?? { approved_count: 0, received_count: 0, requests: [] })
-      setErrorMessage('')
+    if (error) {
+      setErrorMessage(error.message || 'Could not load approved requests.')
+      setLoading(false)
+      return false
     }
+    setDashboard(data ?? { approved_count: 0, received_count: 0, requests: [] })
+    setErrorMessage('')
     setLoading(false)
+    return true
   }
 
   useEffect(() => {
@@ -53,7 +58,7 @@ function ReceiverDashboard({ supabase, email, onSignOut, signingOut }) {
       })
       if (error) throw error
       setSuccessMessage(`${request.reference_code} marked as received.`)
-      await loadDashboard()
+      if (await loadDashboard()) setReceiptRequestId(request.id)
     } catch (error) {
       setErrorMessage(error.message || 'Could not update this request.')
     } finally {
@@ -63,6 +68,7 @@ function ReceiverDashboard({ supabase, email, onSignOut, signingOut }) {
 
   const approvedRequests = dashboard.requests.filter((request) => request.status === 'APPROVED')
   const receivedRequests = dashboard.requests.filter((request) => request.status === 'RECEIVED')
+  const receiptRequest = dashboard.requests.find((request) => request.id === receiptRequestId)
 
   return (
     <section className="role-dashboard" aria-label="Receiver workspace">
@@ -129,6 +135,9 @@ function ReceiverDashboard({ supabase, email, onSignOut, signingOut }) {
                       ))}
                     </div>
                     <footer className="pending-request-actions receiver-request-actions">
+                      <button type="button" className="cancel-button" onClick={() => setReceiptRequestId(request.id)}>
+                        Print release receipt
+                      </button>
                       <button type="button" className="approve-button" disabled={busyRequestId === request.id} onClick={() => markReceived(request)}>
                         {busyRequestId === request.id ? 'Saving...' : 'Confirm release & deduct stock'}
                       </button>
@@ -146,7 +155,10 @@ function ReceiverDashboard({ supabase, email, onSignOut, signingOut }) {
             {receivedRequests.length ? receivedRequests.map((request) => (
               <div className="received-request-row" key={request.id}>
                 <div><strong>{request.reference_code}</strong><span>{request.requestor_name} · {request.department}</span></div>
-                <span>RECEIVED</span>
+                <div className="received-request-actions">
+                  <span>RECEIVED</span>
+                  <button className="refresh-button" type="button" onClick={() => setReceiptRequestId(request.id)}>Print receipt</button>
+                </div>
               </div>
             )) : <p className="approver-muted queue-empty">Completed requests will be listed here.</p>}
           </section>
@@ -154,6 +166,62 @@ function ReceiverDashboard({ supabase, email, onSignOut, signingOut }) {
 
         <footer className="page-footer"><span>SUPPLY OPERATIONS</span><span>AUTHORIZED PERSONNEL ONLY</span></footer>
       </div>
+      {receiptRequest && (
+        <div className="release-receipt-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setReceiptRequestId(null)
+        }}>
+          <section className="release-receipt" role="dialog" aria-modal="true" aria-labelledby="release-receipt-title">
+            <header className="release-receipt-header">
+              <div>
+                <p className="eyebrow">SUPPLY OPERATIONS / RELEASE RECORD</p>
+                <h2 id="release-receipt-title">Office Supplies Release Receipt</h2>
+              </div>
+              <button className="release-receipt-close" type="button" onClick={() => setReceiptRequestId(null)} aria-label="Close receipt">×</button>
+            </header>
+            <div className="release-receipt-meta">
+              <div><span>CONTROL NO.</span><strong>{receiptRequest.reference_code}</strong></div>
+              <div><span>REQUEST DATE</span><strong>{formatDate(receiptRequest.created_at)}</strong></div>
+              <div><span>DEPARTMENT</span><strong>{receiptRequest.department}</strong></div>
+              <div><span>REQUESTOR</span><strong>{receiptRequest.requestor_name}</strong></div>
+              <div><span>APPROVAL DATE</span><strong>{receiptRequest.reviewed_at ? formatDate(receiptRequest.reviewed_at) : 'Pending approval'}</strong></div>
+              <div><span>RELEASE DATE</span><strong>{receiptRequest.received_at ? formatDate(receiptRequest.received_at) : 'To be completed at handoff'}</strong></div>
+            </div>
+            {receiptRequest.remarks && (
+              <p className="release-receipt-remarks"><strong>Purpose / remarks:</strong> {receiptRequest.remarks}</p>
+            )}
+            <table className="release-receipt-items">
+              <thead>
+                <tr><th>Item / specification</th><th>Unit</th><th>Qty approved</th><th>Qty released</th></tr>
+              </thead>
+              <tbody>
+                {receiptRequest.items.map((item, index) => (
+                  <tr key={`${receiptRequest.id}-receipt-${index}`}>
+                    <td>
+                      <strong>{item.name}</strong>
+                      {item.attributes?.length > 0 && (
+                        <small>{item.attributes.map((attribute) => `${attribute.name}: ${attribute.value || 'Not specified'}`).join(' · ')}</small>
+                      )}
+                    </td>
+                    <td>{item.unit}</td>
+                    <td>{item.quantity}</td>
+                    <td>{receiptRequest.status === 'RECEIVED' ? item.quantity : '________'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="release-receipt-certification">I acknowledge receipt of the supplies and quantities recorded above.</p>
+            <div className="release-receipt-signatures">
+              <div><strong>{receiptRequest.requestor_name}</strong><span>Requestor signature</span><span>Date: ____________________</span></div>
+              <div><strong>{receiptRequest.approver_name || ' '}</strong><span>Approver signature</span><span>Date: {receiptRequest.reviewed_at ? formatDate(receiptRequest.reviewed_at) : '____________________'}</span></div>
+              <div><strong>{receiptRequest.receiver_name || ' '}</strong><span>Receiver signature</span><span>Date: {receiptRequest.received_at ? formatDate(receiptRequest.received_at) : '____________________'}</span></div>
+            </div>
+            <footer className="release-receipt-actions">
+              <button className="cancel-button" type="button" onClick={() => setReceiptRequestId(null)}>Close</button>
+              <button className="approve-button" type="button" onClick={() => window.print()}>Print receipt</button>
+            </footer>
+          </section>
+        </div>
+      )}
     </section>
   )
 }
