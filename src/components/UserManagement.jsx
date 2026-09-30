@@ -27,6 +27,9 @@ function UserManagement({ supabase }) {
   const [successMessage, setSuccessMessage] = useState('')
   const [search, setSearch] = useState('')
   const [editingUser, setEditingUser] = useState(null)
+  const [passwordTarget, setPasswordTarget] = useState(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState(initialForm)
 
@@ -151,6 +154,52 @@ function UserManagement({ supabase }) {
     }
   }
 
+  function startPasswordChange(user) {
+    setPasswordTarget(user)
+    setNewPassword('')
+    setConfirmNewPassword('')
+    setShowPassword(false)
+    setErrorMessage('')
+    setSuccessMessage('')
+  }
+
+  function cancelPasswordChange() {
+    setPasswordTarget(null)
+    setNewPassword('')
+    setConfirmNewPassword('')
+    setShowPassword(false)
+  }
+
+  async function handleSetPassword(event) {
+    event.preventDefault()
+    if (saving || !passwordTarget) return
+    if (newPassword.length < 8) {
+      setErrorMessage('Use a password with at least 8 characters.')
+      return
+    }
+    if (newPassword !== confirmNewPassword) {
+      setErrorMessage('The passwords do not match.')
+      return
+    }
+    if (!window.confirm(`Set a new password for ${passwordTarget.full_name}?`)) return
+
+    setSaving(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+    try {
+      const result = await invokeAdmin(supabase, 'set-password', {
+        id: passwordTarget.id,
+        password: newPassword,
+      })
+      setSuccessMessage(result.message)
+      cancelPasswordChange()
+    } catch (error) {
+      setErrorMessage(error.message || 'Could not set this user password.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <section className="user-management" aria-labelledby="users-title">
       <div className="users-heading">
@@ -251,6 +300,50 @@ function UserManagement({ supabase }) {
           {errorMessage && <p className="inventory-message error-message" role="alert">{errorMessage}</p>}
           {successMessage && <p className="inventory-message success-message" role="status">{successMessage}</p>}
 
+          {passwordTarget && (
+            <section className="set-user-password" aria-labelledby="set-user-password-title">
+              <div className="section-heading">
+                <p className="eyebrow">ADMINISTRATOR ACTION</p>
+                <h2 id="set-user-password-title">Set password for {passwordTarget.full_name}</h2>
+              </div>
+              <p className="user-form-help">This immediately replaces the account password. Share it with the user through a secure channel.</p>
+              <form className="item-form" onSubmit={handleSetPassword}>
+                <div className="password-label-row">
+                  <label htmlFor="user-new-password">New password</label>
+                  <button className="reveal-button" type="button" onClick={() => setShowPassword((visible) => !visible)}>
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <input
+                  id="user-new-password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  minLength="8"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  required
+                />
+                <label htmlFor="user-confirm-new-password">Confirm new password</label>
+                <input
+                  id="user-confirm-new-password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  minLength="8"
+                  value={confirmNewPassword}
+                  onChange={(event) => setConfirmNewPassword(event.target.value)}
+                  required
+                />
+                <div className="form-actions">
+                  <button className="submit-button" type="submit" disabled={saving}>
+                    {saving ? 'Saving...' : 'Set password'}
+                    <span aria-hidden="true">&gt;</span>
+                  </button>
+                  <button className="cancel-button" type="button" onClick={cancelPasswordChange} disabled={saving}>Cancel</button>
+                </div>
+              </form>
+            </section>
+          )}
+
           <div className="item-table-wrap">
             <table className="item-table users-table">
               <thead>
@@ -269,6 +362,7 @@ function UserManagement({ supabase }) {
                         <>
                           <button type="button" onClick={() => startEditing(user)}>Edit</button>
                           <button type="button" onClick={() => changeActiveState(user)}>{user.is_active ? 'Deactivate' : 'Activate'}</button>
+                          <button type="button" onClick={() => startPasswordChange(user)}>Set password</button>
                           <button type="button" onClick={() => sendPasswordReset(user)} disabled={!user.is_active}>Reset access</button>
                           <button className="delete-user-button" type="button" onClick={() => deleteUser(user)}>Delete</button>
                         </>

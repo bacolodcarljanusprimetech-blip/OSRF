@@ -643,6 +643,12 @@
 .user-form-help { margin-top: 12px; color: #78847b; font-size: 11px; line-height: 1.55; }
 .user-form-section .item-form { margin-top: 19px; }
 .user-form-section .item-form select { margin-bottom: 20px; }
+.set-user-password { margin: 0 0 20px; padding: 18px; border: 1px solid #dfe6de; background: #f8faf7; }
+.set-user-password .item-form { max-width: 440px; margin-top: 16px; }
+.set-user-password .password-label-row label { margin: 0 0 7px; color: #33453a; font-size: 11px; font-weight: 700; }
+.set-user-password .form-actions { max-width: 300px; flex-direction: row; }
+.set-user-password .form-actions .submit-button { flex: 1; }
+.set-user-password .form-actions .cancel-button { flex: 1; }
 .users-list-tools { display: flex; align-items: center; gap: 7px; }
 .users-list-tools .search-field { width: min(185px, 39vw); }
 .refresh-button { height: 36px; padding: 0 10px; border: 1px solid #d7ded7; border-radius: 2px; background: #fff; color: var(--primetech-green-dark); cursor: pointer; font: inherit; font-size: 10px; }

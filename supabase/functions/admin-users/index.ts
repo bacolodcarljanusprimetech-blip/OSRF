@@ -213,6 +213,30 @@ Deno.serve(async (request) => {
     return respond({ message: isActive ? 'User activated.' : 'User deactivated.' })
   }
 
+  if (action === 'set-password') {
+    const id = typeof body.id === 'string' ? body.id : ''
+    const password = typeof body.password === 'string' ? body.password : ''
+    if (!id || password.length < 8) {
+      return respond({ error: 'A user id and a password of at least 8 characters are required.' }, 400)
+    }
+
+    const { data: profile, error: profileError } = await admin
+      .from('profiles')
+      .select('id, role')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (profileError) return respond({ error: profileError.message }, 500)
+    if (!profile || !allowedRoles.has(profile.role)) {
+      return respond({ error: 'Passwords can only be set for Approver or Receiver accounts.' }, 403)
+    }
+
+    const { error: passwordError } = await admin.auth.admin.updateUserById(id, { password })
+    if (passwordError) return respond({ error: passwordError.message }, 400)
+
+    return respond({ message: `Password updated for ${profile.role.toLowerCase()} account.` })
+  }
+
   if (action === 'delete') {
     const id = typeof body.id === 'string' ? body.id : ''
     if (!id || id === actorData.user.id) {
