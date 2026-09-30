@@ -735,6 +735,9 @@ as $function$
 declare
   v_actor_id uuid := auth.uid();
   v_reference_code text;
+  v_request_status text;
+  v_line record;
+  v_available_quantity integer;
 begin
   if v_actor_id is null
     or coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') <> 'RECEIVER'
@@ -746,14 +749,54 @@ begin
     raise exception 'Active receiver access is required.' using errcode = '42501';
   end if;
 
-  update public.supply_requests as request
-  set status = 'RECEIVED', received_by = v_actor_id, received_at = now(), updated_at = now()
-  where request.id = p_request_id and request.status = 'APPROVED'
-  returning request.reference_code into v_reference_code;
+  select request.reference_code, request.status
+  into v_reference_code, v_request_status
+  from public.supply_requests as request
+  where request.id = p_request_id
+  for update;
 
-  if v_reference_code is null then
+  if not found or v_request_status <> 'APPROVED' then
     raise exception 'Only approved requests can be marked received.' using errcode = '22023';
   end if;
+
+  for v_line in
+    select line.supply_item_id, sum(line.quantity)::integer as requested_quantity,
+      max(line.item_name) as item_name
+    from public.supply_request_items as line
+    where line.request_id = p_request_id
+    group by line.supply_item_id
+    order by line.supply_item_id
+  loop
+    select item.quantity
+    into v_available_quantity
+    from public.supply_items as item
+    where item.id = v_line.supply_item_id
+    for update;
+
+    if not found then
+      raise exception 'Supply item "%" no longer exists in inventory.', v_line.item_name
+        using errcode = '22023';
+    end if;
+    if v_available_quantity < v_line.requested_quantity then
+      raise exception 'STOCK_UNAVAILABLE: "%" has only % in stock, but % were requested.',
+        v_line.item_name, v_available_quantity, v_line.requested_quantity
+        using errcode = '22023';
+    end if;
+
+    update public.supply_items as item
+    set quantity = item.quantity - v_line.requested_quantity,
+        is_available = case
+          when item.quantity - v_line.requested_quantity = 0 then false
+          else item.is_available
+        end,
+        updated_at = now()
+    where item.id = v_line.supply_item_id;
+  end loop;
+
+  update public.supply_requests as request
+  set status = 'RECEIVED', received_by = v_actor_id, received_at = now(), updated_at = now()
+  where request.id = p_request_id
+  returning request.reference_code into v_reference_code;
 
   return v_reference_code;
 end;

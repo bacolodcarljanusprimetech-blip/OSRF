@@ -91,7 +91,7 @@ function ReceiverDashboard({ supabase, email, onSignOut, signingOut }) {
             <div>
               <p className="eyebrow">RECEIVER / OVERVIEW</p>
               <h1>Approved supplies</h1>
-              <p>Review approved requests and confirm once supplies have been released.</p>
+              <p>Confirm a request after releasing the supplies; confirmation deducts them from inventory.</p>
             </div>
             <button className="refresh-button" type="button" onClick={loadDashboard} disabled={loading}>Refresh</button>
           </div>
@@ -130,7 +130,7 @@ function ReceiverDashboard({ supabase, email, onSignOut, signingOut }) {
                     </div>
                     <footer className="pending-request-actions receiver-request-actions">
                       <button type="button" className="approve-button" disabled={busyRequestId === request.id} onClick={() => markReceived(request)}>
-                        {busyRequestId === request.id ? 'Saving...' : 'Confirm supplies received'}
+                        {busyRequestId === request.id ? 'Saving...' : 'Confirm release & deduct stock'}
                       </button>
                     </footer>
                   </article>

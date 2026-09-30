@@ -57,7 +57,7 @@ Requestors do not sign in. Share the app's `/request` URL in the QR code or comp
 
 Approvers see request totals, today's volume, requested units, unique requestors, department/requestor/item rankings, and a pending review queue. Pending requests open in a full-detail modal. The **Review history** module can be searched and filtered by status and department. Approve moves a pending request to `APPROVED` for the Receiver; reject requires a reason. Database RPCs enforce roles and only allow decisions while a request is `PENDING`.
 
-Receivers see approved handoffs and can confirm receipt, moving a request from `APPROVED` to `RECEIVED`. Review/receipt users and timestamps are recorded. Direct request-table access is revoked; role-checked RPCs perform these actions.
+Receivers see approved handoffs and confirm after physically releasing the supplies. The `mark_supply_request_received` RPC atomically deducts each requested quantity from inventory, marks an item unavailable if its stock reaches zero, and moves the request from `APPROVED` to `RECEIVED`. If stock has become insufficient, the operation fails without changing inventory or request status; resolve the discrepancy before confirming release. Review/receipt users and timestamps are recorded. Direct request-table access is revoked; role-checked RPCs perform these actions. Run the updated `supabase/schema.sql` in Supabase SQL Editor to apply this behavior to the live database.
 
 ## User management
 
