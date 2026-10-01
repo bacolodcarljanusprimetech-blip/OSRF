@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import BrandLockup from './BrandLockup'
+import ReleaseReceipt from './ReleaseReceipt'
 
 function formatDate(value) {
   return new Intl.DateTimeFormat('en-PH', {
@@ -192,64 +193,7 @@ function ReceiverDashboard({ supabase, email, onSignOut, signingOut }) {
 
         <footer className="page-footer"><span>SUPPLY OPERATIONS</span><span>AUTHORIZED PERSONNEL ONLY</span></footer>
       </div>
-      {receiptRequest && (
-        <div className="release-receipt-overlay" role="presentation" onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setReceiptRequestId(null)
-        }}>
-          <section className="release-receipt" role="dialog" aria-modal="true" aria-labelledby="release-receipt-title">
-            <header className="release-receipt-header">
-              <div className="release-receipt-letterhead">
-                <img src="/Picture1.png" alt="Primetech Oil, Inc. letterhead with Head Office and Baliwag Plant contact information" />
-              </div>
-              <button className="release-receipt-close" type="button" onClick={() => setReceiptRequestId(null)} aria-label="Close receipt">×</button>
-            </header>
-            <div className="release-receipt-titlebar">
-              <h2 id="release-receipt-title">Office Supplies Release Receipt</h2>
-            </div>
-            <div className="release-receipt-meta">
-              <div><span>CONTROL NO.</span><strong>{receiptRequest.reference_code}</strong></div>
-              <div><span>REQUEST DATE</span><strong>{formatDate(receiptRequest.created_at)}</strong></div>
-              <div><span>DEPARTMENT</span><strong>{receiptRequest.department}</strong></div>
-              <div><span>REQUESTOR</span><strong>{receiptRequest.requestor_name}</strong></div>
-              <div><span>APPROVAL DATE</span><strong>{receiptRequest.reviewed_at ? formatDate(receiptRequest.reviewed_at) : 'Pending approval'}</strong></div>
-              <div><span>RELEASE DATE</span><strong>{receiptRequest.received_at ? formatDate(receiptRequest.received_at) : 'To be completed at handoff'}</strong></div>
-            </div>
-            {receiptRequest.remarks && (
-              <p className="release-receipt-remarks"><strong>Purpose / remarks:</strong> {receiptRequest.remarks}</p>
-            )}
-            <table className="release-receipt-items">
-              <thead>
-                <tr><th>Item / specification</th><th>Unit</th><th>Qty approved</th><th>Qty released</th></tr>
-              </thead>
-              <tbody>
-                {receiptRequest.items.map((item, index) => (
-                  <tr key={`${receiptRequest.id}-receipt-${index}`}>
-                    <td>
-                      <strong>{item.name}</strong>
-                      {item.attributes?.length > 0 && (
-                        <small>{item.attributes.map((attribute) => `${attribute.name}: ${attribute.value || 'Not specified'}`).join(' · ')}</small>
-                      )}
-                    </td>
-                    <td>{item.unit}</td>
-                    <td>{item.quantity}</td>
-                    <td>{receiptRequest.status === 'RECEIVED' ? item.quantity : '________'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="release-receipt-certification">I acknowledge receipt of the supplies and quantities recorded above.</p>
-            <div className="release-receipt-signatures">
-              <div><strong>{receiptRequest.requestor_name}</strong><span>Requestor signature</span><span>Date: ____________________</span></div>
-              <div><strong>{receiptRequest.approver_name || ' '}</strong><span>Approver signature</span><span>Date: {receiptRequest.reviewed_at ? formatDate(receiptRequest.reviewed_at) : '____________________'}</span></div>
-              <div><strong>{receiptRequest.receiver_name || ' '}</strong><span>Receiver signature</span><span>Date: {receiptRequest.received_at ? formatDate(receiptRequest.received_at) : '____________________'}</span></div>
-            </div>
-            <footer className="release-receipt-actions">
-              <button className="cancel-button" type="button" onClick={() => setReceiptRequestId(null)}>Close</button>
-              <button className="approve-button" type="button" onClick={() => window.print()}>Print receipt</button>
-            </footer>
-          </section>
-        </div>
-      )}
+      {receiptRequest && <ReleaseReceipt request={receiptRequest} onClose={() => setReceiptRequestId(null)} />}
     </section>
   )
 }

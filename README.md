@@ -43,7 +43,7 @@ The admin workspace can add and edit supply names, categories, descriptions, uni
 
 The **Attributes** admin module defines reusable fields such as Brand, Color, Size, Material, Model, or custom fields like Adhesive Type. In an item's form, select only the fields that apply. Each field is optional by default; an Admin can explicitly require it on the request form. Enter comma- or newline-separated values to make them searchable, such as `Pilot, BIC` for Ballpen brand or `Blue, Black` for color. Inventory search matches item name, category, description, attribute names, and configured values.
 
-The public-safe RPC `search_requestable_supply_items(search_text)` is ready for the QR request form. Call it with `supabase.rpc('search_requestable_supply_items', { search_text: 'blue pen' })`. It returns available items and their configured attribute names/values, but does not expose stock quantities. Run the latest `supabase/schema.sql` in Supabase SQL Editor before using these fields or the RPC.
+The public-safe RPC `search_requestable_supply_items(search_text)` is ready for the QR request form. Call it with `supabase.rpc('search_requestable_supply_items', { search_text: 'blue pen' })`. It returns available items, current on-hand quantities, and configured attribute names/values. Run the latest `supabase/schema.sql` in Supabase SQL Editor before using these fields or the RPC.
 
 ## Departments
 
@@ -51,7 +51,7 @@ The Admin **Departments** module manages the choices shown on the public request
 
 ## Requestor form
 
-Requestors do not sign in. Share the app's `/request` URL in the QR code or company portal. The form collects name and department, supports searching available supplies, accepts multiple item lines and configured attributes, and creates a `PENDING` request. The database returns an ID in `MM-NNN` format such as `09-001`; the numeric counter is global and does not reset each month. Requestors can use **Track a request** or `supabase.rpc('track_supply_request', { p_reference_code: '09-001' })` to see only the request status and submission time. `supabase.rpc('submit_supply_request', ...)` performs server-side validation and stores the request atomically. Run the latest `supabase/schema.sql` before testing this module.
+Requestors do not sign in. Share the app's `/request` URL in the QR code or company portal. The form collects name and department, supports searching available supplies with current stock quantities, accepts multiple item lines and configured attributes, and creates a `PENDING` request. The database returns an ID in `MM-NNN` format such as `09-001`; the numeric counter is global and does not reset each month. Requestors can use **Track a request** or `supabase.rpc('track_supply_request', { p_reference_code: '09-001' })` to see request status and submission time, then access the signed release receipt once the Receiver records the handoff. Receipt details are returned only for requests with `RECEIVED` status. `supabase.rpc('submit_supply_request', ...)` performs server-side validation and stores the request atomically. Run the latest `supabase/schema.sql` before testing this module.
 
 ## Approval workflow
 

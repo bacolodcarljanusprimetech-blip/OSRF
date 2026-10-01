@@ -119,13 +119,15 @@ insert into public.supply_attributes (name)
 values ('Brand'), ('Color'), ('Size'), ('Material'), ('Model'), ('Type')
 on conflict do nothing;
 
-create or replace function public.search_requestable_supply_items(search_text text default null)
+drop function if exists public.search_requestable_supply_items(text);
+create function public.search_requestable_supply_items(search_text text default null)
 returns table (
   id uuid,
   name text,
   category text,
   description text,
   unit text,
+  quantity integer,
   attributes jsonb
 )
 language sql
@@ -139,6 +141,7 @@ as $function$
     item.category,
     item.description,
     item.unit,
+    item.quantity,
     coalesce((
       select jsonb_agg(jsonb_build_object(
         'id', attribute.id,
@@ -448,24 +451,6 @@ $function$;
 revoke all on function public.submit_supply_request(text, text, text, jsonb) from public;
 grant execute on function public.submit_supply_request(text, text, text, jsonb) to anon, authenticated;
 
-drop function if exists public.track_supply_request(text);
-create function public.track_supply_request(p_reference_code text)
-returns table (reference_code text, status text, created_at timestamptz, rejection_reason text)
-language sql
-stable
-security definer
-set search_path = ''
-as $function$
-  select request.reference_code, request.status, request.created_at,
-    case when request.status = 'REJECTED' then request.rejection_reason else null end
-  from public.supply_requests as request
-  where request.reference_code = upper(trim(coalesce(p_reference_code, '')))
-  limit 1;
-$function$;
-
-revoke all on function public.track_supply_request(text) from public;
-grant execute on function public.track_supply_request(text) to anon, authenticated;
-
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
@@ -485,6 +470,59 @@ alter table public.supply_requests
   add column if not exists reviewed_at timestamptz,
   add column if not exists received_by uuid references public.profiles(id) on delete set null,
   add column if not exists received_at timestamptz;
+
+drop function if exists public.track_supply_request(text);
+create function public.track_supply_request(p_reference_code text)
+returns table (
+  reference_code text,
+  status text,
+  created_at timestamptz,
+  rejection_reason text,
+  requestor_name text,
+  department text,
+  remarks text,
+  reviewed_at timestamptz,
+  approver_name text,
+  received_at timestamptz,
+  receiver_name text,
+  items jsonb
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select
+    request.reference_code,
+    request.status,
+    request.created_at,
+    case when request.status = 'REJECTED' then request.rejection_reason else null end,
+    case when request.status = 'RECEIVED' then request.requestor_name else null end,
+    case when request.status = 'RECEIVED' then request.department else null end,
+    case when request.status = 'RECEIVED' then request.remarks else null end,
+    case when request.status = 'RECEIVED' then request.reviewed_at else null end,
+    case when request.status = 'RECEIVED' then approver.full_name else null end,
+    case when request.status = 'RECEIVED' then request.received_at else null end,
+    case when request.status = 'RECEIVED' then receiver.full_name else null end,
+    case when request.status = 'RECEIVED' then coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'name', line.item_name,
+        'unit', line.unit,
+        'quantity', line.quantity,
+        'attributes', line.attributes
+      ) order by line.created_at)
+      from public.supply_request_items as line
+      where line.request_id = request.id
+    ), '[]'::jsonb) else null end
+  from public.supply_requests as request
+  left join public.profiles as approver on approver.id = request.reviewed_by
+  left join public.profiles as receiver on receiver.id = request.received_by
+  where request.reference_code = upper(trim(coalesce(p_reference_code, '')))
+  limit 1;
+$function$;
+
+revoke all on function public.track_supply_request(text) from public;
+grant execute on function public.track_supply_request(text) to anon, authenticated;
 
 create or replace function public.get_approver_dashboard()
 returns jsonb

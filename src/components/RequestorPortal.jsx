@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import BrandLockup from './BrandLockup'
+import ReleaseReceipt from './ReleaseReceipt'
 
 function formatDate(value) {
   return new Intl.DateTimeFormat('en-PH', {
@@ -32,6 +33,7 @@ function RequestorPortal({ supabase }) {
   const [tracking, setTracking] = useState(false)
   const [trackingError, setTrackingError] = useState('')
   const [trackedRequest, setTrackedRequest] = useState(null)
+  const [showTrackedReceipt, setShowTrackedReceipt] = useState(false)
   const [copyMessage, setCopyMessage] = useState('')
 
   async function loadDepartments() {
@@ -224,6 +226,7 @@ function RequestorPortal({ supabase }) {
     const normalizedCode = trackCode.trim().toUpperCase()
     if (!/^\d{2}-\d{3,}$/.test(normalizedCode)) {
       setTrackedRequest(null)
+      setShowTrackedReceipt(false)
       setTrackingError('Enter the request ID in the format 09-001.')
       return
     }
@@ -231,6 +234,7 @@ function RequestorPortal({ supabase }) {
     setTracking(true)
     setTrackingError('')
     setTrackedRequest(null)
+    setShowTrackedReceipt(false)
     try {
       const { data, error } = await supabase.rpc('track_supply_request', {
         p_reference_code: normalizedCode,
@@ -379,7 +383,7 @@ function RequestorPortal({ supabase }) {
                     <article className="request-catalog-item" key={item.id}>
                       <div>
                         <h3>{item.name}</h3>
-                        <span>{item.category} · {item.unit}</span>
+                        <span>{item.category} · {item.unit} · <strong className="catalog-stock-count">Available: {item.quantity}</strong></span>
                         {item.description && <p>{item.description}</p>}
                         {item.attributes?.length > 0 && (
                           <p className="catalog-attribute-summary">
@@ -526,12 +530,20 @@ function RequestorPortal({ supabase }) {
                     {copyMessage || 'Copy request ID'}
                   </button>
                 )}
+                {trackedRequest.status === 'RECEIVED' && trackedRequest.items?.length > 0 && (
+                  <button className="copy-reference-button tracked-receipt-button" type="button" onClick={() => setShowTrackedReceipt(true)}>
+                    View / print release receipt
+                  </button>
+                )}
               </div>
             )}
           </section>
         )}
       </div>
 
+      {showTrackedReceipt && trackedRequest?.status === 'RECEIVED' && (
+        <ReleaseReceipt request={trackedRequest} onClose={() => setShowTrackedReceipt(false)} />
+      )}
       <footer className="requestor-footer"><span>SUPPLY OPERATIONS</span><span>REQUESTS ARE SUBJECT TO APPROVAL</span></footer>
     </main>
   )
