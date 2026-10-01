@@ -54,7 +54,7 @@ function ReleaseReceipt({ request, onClose }) {
         </table>
         <p className="release-receipt-certification">I acknowledge receipt of the supplies and quantities recorded above.</p>
         <div className="release-receipt-signatures">
-          <div><strong>{request.requestor_name}</strong><span>Request by:</span><span>Date: ____________________</span></div>
+          <div><strong>{request.requestor_name}</strong><span>Requested by:</span><span>Date: {formatDate(request.created_at)}</span></div>
           <div><strong>{request.approver_name || ' '}</strong><span>Approved by:</span><span>Date: {request.reviewed_at ? formatDate(request.reviewed_at) : '____________________'}</span></div>
           <div><strong>{request.receiver_name || ' '}</strong><span>Released by:</span><span>Date: {request.received_at ? formatDate(request.received_at) : '____________________'}</span></div>
         </div>
