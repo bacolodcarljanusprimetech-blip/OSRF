@@ -198,12 +198,14 @@ function ReceiverDashboard({ supabase, email, onSignOut, signingOut }) {
         }}>
           <section className="release-receipt" role="dialog" aria-modal="true" aria-labelledby="release-receipt-title">
             <header className="release-receipt-header">
-              <div>
-                <p className="eyebrow">SUPPLY OPERATIONS / RELEASE RECORD</p>
-                <h2 id="release-receipt-title">Office Supplies Release Receipt</h2>
+              <div className="release-receipt-letterhead">
+                <img src="/Picture1.png" alt="Primetech Oil, Inc. letterhead with Head Office and Baliwag Plant contact information" />
               </div>
               <button className="release-receipt-close" type="button" onClick={() => setReceiptRequestId(null)} aria-label="Close receipt">×</button>
             </header>
+            <div className="release-receipt-titlebar">
+              <h2 id="release-receipt-title">Office Supplies Release Receipt</h2>
+            </div>
             <div className="release-receipt-meta">
               <div><span>CONTROL NO.</span><strong>{receiptRequest.reference_code}</strong></div>
               <div><span>REQUEST DATE</span><strong>{formatDate(receiptRequest.created_at)}</strong></div>
