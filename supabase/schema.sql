@@ -559,6 +559,18 @@ begin
         limit 8
       ) as summary
     ), '[]'::jsonb),
+    'inventory_items', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', item.id,
+        'name', item.name,
+        'category', item.category,
+        'description', item.description,
+        'unit', item.unit,
+        'quantity', item.quantity,
+        'is_available', item.is_available
+      ) order by lower(item.name), item.id)
+      from public.supply_items as item
+    ), '[]'::jsonb),
     'pending_queue', coalesce((
       select jsonb_agg(jsonb_build_object(
         'id', request.id,
@@ -623,6 +635,7 @@ begin
     'departments', '[]'::jsonb,
     'top_requestors', '[]'::jsonb,
     'top_items', '[]'::jsonb,
+    'inventory_items', '[]'::jsonb,
     'pending_queue', '[]'::jsonb,
     'review_history', '[]'::jsonb
   ));

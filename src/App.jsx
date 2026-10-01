@@ -186,7 +186,7 @@ function AdminApp() {
           <div className="login-aside">
             <div className="aside-copy">
               <p className="eyebrow">PRIMETECH OIL, INC.</p>
-              <h1>Office supplies,<br />within reach.</h1>
+              <h1>Office supplies<br />Requisition system</h1>
               <p className="aside-description">Manage supply availability and keep office requests moving.</p>
             </div>
             <div className="aside-foot">

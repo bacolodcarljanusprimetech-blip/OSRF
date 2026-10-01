@@ -20,11 +20,12 @@ function formatDate(value) {
 }
 
 function ApproverDashboard({ supabase, email, onSignOut, signingOut }) {
-  const emptyDashboard = { metrics: emptyMetrics, departments: [], top_requestors: [], top_items: [], pending_queue: [], review_history: [] }
+  const emptyDashboard = { metrics: emptyMetrics, departments: [], top_requestors: [], top_items: [], inventory_items: [], pending_queue: [], review_history: [] }
   const [dashboard, setDashboard] = useState(emptyDashboard)
   const [loading, setLoading] = useState(true)
   const [activeModule, setActiveModule] = useState('pending')
   const [search, setSearch] = useState('')
+  const [stockSearch, setStockSearch] = useState('')
   const [departmentFilter, setDepartmentFilter] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [errorMessage, setErrorMessage] = useState('')
@@ -129,26 +130,63 @@ function ApproverDashboard({ supabase, email, onSignOut, signingOut }) {
     ...(dashboard.pending_queue ?? []).map((request) => request.department),
     ...(dashboard.review_history ?? []).map((request) => request.department),
   ])].sort((first, second) => first.localeCompare(second))
+  const inventoryConfigured = Array.isArray(dashboard.inventory_items)
+  const inventoryItems = inventoryConfigured ? dashboard.inventory_items : []
+  const filteredInventoryItems = inventoryItems.filter((item) =>
+    `${item.name} ${item.category} ${item.description ?? ''}`.toLowerCase().includes(stockSearch.trim().toLowerCase()),
+  )
+  const availableInventoryCount = inventoryItems.filter((item) => item.is_available && item.quantity > 0).length
+  const totalStockQuantity = inventoryItems.reduce((total, item) => total + item.quantity, 0)
+  const approverInitials = (email || 'A')
+    .split('@')[0]
+    .split(/[._-]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join('')
 
   return (
     <section className="role-dashboard" aria-label="Approver workspace">
-      <aside className="role-sidebar">
-        <div className="sidebar-brand"><BrandLockup /></div>
-        <p className="sidebar-section-label">APPROVER MODULES</p>
+      <aside className="role-sidebar approver-sidebar">
+        <div className="sidebar-brand">
+          <BrandLockup />
+          <span className="approver-sidebar-caption">SUPPLY OPERATIONS</span>
+        </div>
+        <div className="approver-sidebar-section">
+          <span className="approver-sidebar-kicker">WORKSPACE</span>
+          <p className="sidebar-section-label">REQUEST CONTROL</p>
+        </div>
         <nav className="role-nav" aria-label="Approver navigation">
           <button className="role-nav-item" type="button" aria-current={activeModule === 'pending' ? 'page' : undefined} onClick={() => setActiveModule('pending')}>
-            Pending requests <span>{metrics.pending_requests}</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14M5 10.5h14M5 15.5h8M5 20h8M3 3h18v18H3z" /></svg>
+            <span className="approver-nav-label">Pending requests</span>
+            <span className="approver-nav-count">{metrics.pending_requests}</span>
           </button>
           <button className="role-nav-item" type="button" aria-current={activeModule === 'history' ? 'page' : undefined} onClick={() => setActiveModule('history')}>
-            Review history
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10M3 3h18v18H3z" /><path d="m16 16 2 2 4-4" /></svg>
+            <span className="approver-nav-label">Review history</span>
+          </button>
+          <button className="role-nav-item" type="button" aria-current={activeModule === 'stock' ? 'page' : undefined} onClick={() => setActiveModule('stock')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z" /><path d="m3 7.5 9 4.5 9-4.5M12 12v9M7.5 5.25l9 4.5" /></svg>
+            <span className="approver-nav-label">Stock availability</span>
+            <span className="approver-nav-count">{availableInventoryCount}</span>
           </button>
         </nav>
-        <div className="sidebar-footer"><span className="status-dot" />APPROVER</div>
+        <div className="approver-sidebar-summary">
+          <span className="approver-summary-icon" aria-hidden="true">!</span>
+          <div><strong>{metrics.pending_requests} awaiting review</strong><span>Keep the request queue moving.</span></div>
+        </div>
+        <div className="approver-sidebar-profile">
+          <span className="approver-avatar" aria-hidden="true">{approverInitials || 'A'}</span>
+          <span className="approver-profile-copy"><strong>Approver</strong><small>{email}</small></span>
+          <span className="approver-profile-status" title="Signed in" aria-label="Signed in" />
+        </div>
+        <div className="sidebar-footer"><span className="status-dot" />APPROVER ACCESS</div>
       </aside>
 
       <div className="role-main">
         <header className="role-topline">
-          <span>{activeModule === 'pending' ? 'Pending requests' : 'Review history'}</span>
+          <span>{activeModule === 'pending' ? 'Pending requests' : activeModule === 'history' ? 'Review history' : 'Stock availability'}</span>
           <div className="inventory-account">
             <span className="account-email">{email}</span>
             <button className="sign-out-button" type="button" onClick={onSignOut} disabled={signingOut}>
@@ -160,9 +198,9 @@ function ApproverDashboard({ supabase, email, onSignOut, signingOut }) {
         <main className="approver-content">
           <div className="approver-heading">
             <div>
-              <p className="eyebrow">APPROVER / {activeModule === 'pending' ? 'PENDING REQUESTS' : 'REVIEW HISTORY'}</p>
-              <h1>{activeModule === 'pending' ? 'Request review' : 'Review history'}</h1>
-              <p>{activeModule === 'pending' ? 'Review employee supply requests and route approved requests to the Receiver.' : 'Search and filter completed request decisions and handoffs.'}</p>
+              <p className="eyebrow">APPROVER / {activeModule === 'pending' ? 'PENDING REQUESTS' : activeModule === 'history' ? 'REVIEW HISTORY' : 'STOCK CHECK'}</p>
+              <h1>{activeModule === 'pending' ? 'Request review' : activeModule === 'history' ? 'Review history' : 'Stock availability'}</h1>
+              <p>{activeModule === 'pending' ? 'Review employee supply requests and route approved requests to the Receiver.' : activeModule === 'history' ? 'Search and filter completed request decisions and handoffs.' : 'Check current on-hand quantities before reviewing requests.'}</p>
             </div>
             <button className="refresh-button" type="button" onClick={loadDashboard} disabled={loading}>Refresh</button>
           </div>
@@ -170,6 +208,48 @@ function ApproverDashboard({ supabase, email, onSignOut, signingOut }) {
           {errorMessage && <p className="inventory-message error-message" role="alert">{errorMessage}</p>}
           {successMessage && <p className="inventory-message success-message" role="status">{successMessage}</p>}
 
+          {activeModule === 'stock' ? (
+            <section className="approver-queue approver-stock-panel" aria-labelledby="stock-availability-title">
+              <div className="approver-queue-heading">
+                <div className="section-heading">
+                  <p className="eyebrow">LIVE INVENTORY</p>
+                  <h2 id="stock-availability-title">Supply stock <span>{inventoryItems.length} items</span></h2>
+                </div>
+                <div className="approver-stock-summary">
+                  <span>{availableInventoryCount} available</span>
+                  <span>{totalStockQuantity} total units</span>
+                </div>
+              </div>
+              <div className="approver-filters stock-filters">
+                <label><span>Search supplies</span><input value={stockSearch} onChange={(event) => setStockSearch(event.target.value)} placeholder="Item name or category..." /></label>
+              </div>
+              {loading ? <p className="approver-muted queue-empty">Loading inventory...</p> : !inventoryConfigured ? (
+                <p className="approver-muted queue-empty">Stock availability is not enabled yet. Ask the Administrator to apply the latest Supabase schema.</p>
+              ) : filteredInventoryItems.length ? (
+                <div className="approver-stock-table-wrap">
+                  <table className="approver-stock-table">
+                    <thead><tr><th scope="col">ITEM</th><th scope="col">CATEGORY</th><th scope="col">ON HAND</th><th scope="col">STATUS</th></tr></thead>
+                    <tbody>
+                      {filteredInventoryItems.map((item) => {
+                        const inStock = item.quantity > 0
+                        const available = item.is_available && inStock
+                        return (
+                          <tr key={item.id}>
+                            <td><strong>{item.name}</strong>{item.description && <small>{item.description}</small>}</td>
+                            <td>{item.category}</td>
+                            <td><strong>{item.quantity}</strong> {item.unit}</td>
+                            <td><span className={`stock-availability-badge ${available ? 'is-available' : 'is-unavailable'}`}>{available ? 'Available' : inStock ? 'Not requestable' : 'Out of stock'}</span></td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : <p className="approver-muted queue-empty">{stockSearch ? 'No supplies match your search.' : 'No inventory items are in the catalog.'}</p>}
+              <p className="approver-stock-note">Stock is shown for checking only. Inventory changes are managed by the Administrator and updated when the Receiver confirms a release.</p>
+            </section>
+          ) : (
+            <>
           <section className="approver-metrics" aria-label="Request metrics">
             <div className="approver-metric metric-pending"><span>PENDING REVIEW</span><strong>{metrics.pending_requests}</strong></div>
             <div className="approver-metric"><span>REQUESTS TODAY</span><strong>{metrics.requests_today}</strong></div>
@@ -253,6 +333,8 @@ function ApproverDashboard({ supabase, email, onSignOut, signingOut }) {
                 </div>
               ) : <p className="approver-muted queue-empty">No reviewed requests match these filters.</p>}
             </section>
+          )}
+            </>
           )}
 
           {selectedRequest && (

@@ -69,16 +69,42 @@ function ReceiverDashboard({ supabase, email, onSignOut, signingOut }) {
   const approvedRequests = dashboard.requests.filter((request) => request.status === 'APPROVED')
   const receivedRequests = dashboard.requests.filter((request) => request.status === 'RECEIVED')
   const receiptRequest = dashboard.requests.find((request) => request.id === receiptRequestId)
+  const receiverInitials = (email || 'R')
+    .split('@')[0]
+    .split(/[._-]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join('')
 
   return (
     <section className="role-dashboard" aria-label="Receiver workspace">
-      <aside className="role-sidebar">
-        <div className="sidebar-brand"><BrandLockup /></div>
-        <p className="sidebar-section-label">RECEIVER MODULES</p>
+      <aside className="role-sidebar approver-sidebar receiver-sidebar">
+        <div className="sidebar-brand">
+          <BrandLockup />
+          <span className="approver-sidebar-caption">SUPPLY OPERATIONS</span>
+        </div>
+        <div className="approver-sidebar-section">
+          <span className="approver-sidebar-kicker">WORKSPACE</span>
+          <p className="sidebar-section-label">SUPPLY HANDOFF</p>
+        </div>
         <nav className="role-nav" aria-label="Receiver navigation">
-          <span className="role-nav-item" aria-current="page">Supply handoff</span>
+          <span className="role-nav-item" aria-current="page">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM3 7l2-4h14l2 4M8 11h8M8 15h5" /></svg>
+            <span className="approver-nav-label">Supply handoff</span>
+            <span className="approver-nav-count">{dashboard.approved_count}</span>
+          </span>
         </nav>
-        <div className="sidebar-footer"><span className="status-dot" />RECEIVER</div>
+        <div className="approver-sidebar-summary">
+          <span className="approver-summary-icon" aria-hidden="true">↗</span>
+          <div><strong>{dashboard.approved_count} ready for release</strong><span>Confirm each handoff after supplies are issued.</span></div>
+        </div>
+        <div className="approver-sidebar-profile">
+          <span className="approver-avatar" aria-hidden="true">{receiverInitials || 'R'}</span>
+          <span className="approver-profile-copy"><strong>Receiver</strong><small>{email}</small></span>
+          <span className="approver-profile-status" title="Signed in" aria-label="Signed in" />
+        </div>
+        <div className="sidebar-footer"><span className="status-dot" />RECEIVER ACCESS</div>
       </aside>
 
       <div className="role-main">

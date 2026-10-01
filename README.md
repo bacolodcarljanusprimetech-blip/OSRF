@@ -11,7 +11,7 @@ Administrator sign-in for the Supply Operations application, built with React, V
    NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
    ```
-
+   
 3. In the Supabase Dashboard, open SQL Editor and run [`supabase/schema.sql`](supabase/schema.sql). This creates the inventory, department, profile, flexible-attribute, and request workflow tables/RPCs with access controls. The script is safe to rerun when applying later schema additions.
 4. In **Authentication > Users**, create the admin account. Then run [`supabase/grant-admin-role.sql`](supabase/grant-admin-role.sql) in SQL Editor. It uses `admin.test.20260929@example.com`; update that email in the script if you created a different account. The result should show `ADMIN`. Rerun this script after the profiles table exists if you had already assigned the role earlier.
 5. In **Authentication > URL Configuration**, allow `http://localhost:5174/**` for local invite and password-reset redirects (also allow `http://localhost:5173/**` if you use Vite's default port). Add the deployed app URL there before using invitations in production.
@@ -55,7 +55,7 @@ Requestors do not sign in. Share the app's `/request` URL in the QR code or comp
 
 ## Approval workflow
 
-Approvers see request totals, today's volume, requested units, unique requestors, department/requestor/item rankings, and a pending review queue. Pending requests open in a full-detail modal. The **Review history** module can be searched and filtered by status and department. Approve moves a pending request to `APPROVED` for the Receiver; reject requires a reason. Database RPCs enforce roles and only allow decisions while a request is `PENDING`.
+Approvers see request totals, today's volume, requested units, unique requestors, department/requestor/item rankings, and a pending review queue. The **Stock availability** module shows current on-hand quantities and availability for the supply catalog; it is read-only for Approvers. Pending requests open in a full-detail modal. The **Review history** module can be searched and filtered by status and department. Approve moves a pending request to `APPROVED` for the Receiver; reject requires a reason. Database RPCs enforce roles and only allow decisions while a request is `PENDING`. Run the latest `supabase/schema.sql` in Supabase SQL Editor to expose catalog stock to the Approver dashboard.
 
 Receivers see approved handoffs and confirm after physically releasing the supplies. The `mark_supply_request_received` RPC atomically deducts each requested quantity from inventory, marks an item unavailable if its stock reaches zero, and moves the request from `APPROVED` to `RECEIVED`. If stock has become insufficient, the operation fails without changing inventory or request status; resolve the discrepancy before confirming release. Review/receipt users and timestamps are recorded. The Receiver can print a release receipt before handoff for signatures or reprint it afterward; successful release opens the receipt automatically. The receipt contains the control number, request/approval/release dates, requested items and quantities, and Requestor, Approver, and Receiver signature fields. Direct request-table access is revoked; role-checked RPCs perform these actions. Run the updated `supabase/schema.sql` in Supabase SQL Editor to apply this behavior to the live database.
 

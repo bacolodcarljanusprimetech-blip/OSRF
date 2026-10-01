@@ -274,8 +274,14 @@ function InventoryManager({ supabase, email, onSignOut, signingOut }) {
   return (
     <section className="inventory-workspace" aria-label="Primetech Oil admin workspace">
       <aside className="admin-sidebar">
-        <div className="sidebar-brand"><BrandLockup /></div>
-        <p className="sidebar-section-label">ADMIN MODULES</p>
+        <div className="sidebar-brand">
+          <BrandLockup />
+          <span className="admin-sidebar-caption">SUPPLY OPERATIONS</span>
+        </div>
+        <div className="admin-sidebar-section">
+          <span className="admin-sidebar-kicker">WORKSPACE</span>
+          <p className="sidebar-section-label">ADMINISTRATION</p>
+        </div>
         <nav className="admin-tabs" role="tablist" aria-label="Admin sections">
           <button
             id="inventory-tab"
@@ -313,7 +319,7 @@ function InventoryManager({ supabase, email, onSignOut, signingOut }) {
             onClick={() => setActiveView('departments')}
           ><span className="nav-index" aria-hidden="true">04</span>Departments</button>
         </nav>
-        <div className="sidebar-footer"><span className="status-dot" />ADMINISTRATOR</div>
+        <div className="sidebar-footer"><span className="status-dot" />ADMIN ACCESS</div>
       </aside>
 
       <div className="admin-main">
